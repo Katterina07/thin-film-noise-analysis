@@ -1,338 +1,114 @@
-# Conductivity Fluctuation Analysis
+# Conductivity fluctuation analysis
 
-A Python pipeline for analyzing conductivity fluctuations in thin-film materials using binary `.Q00` measurement files.
+Обработка бинарных Q00, признаки спектра и групповая оценка классификации Bi/Cr/Fe.
 
-The project explores whether spectral features can distinguish bismuth, chromium, and iron films and characterize differences between measurement series and acquisition channels.
+## Структура
 
-## Overview
+- src/dataset_config.py — общий реестр файлов, каналов и настроек.
+- src/signal_processing.py — чтение Q00 и построение CSV.
+- src/train_models.py — оценка моделей, сводки и графики.
+- notebooks/01_signal_processing.ipynb — исследование обработки.
+- notebooks/02_train_models.ipynb — оценка моделей.
 
-The pipeline combines signal processing, exploratory analysis, and machine learning:
+build_dataset.py не используется и не нужен.
 
-- Parse binary `.Q00` records and calibration metadata.
-- Divide signals into overlapping windows.
-- Remove linear trends and extract FFT-based spectral features.
-- Preserve measurement-series and channel identifiers.
-- Evaluate material classification using grouped cross-validation.
-- Compare feature distributions across files and channels.
+## Что зарегистрировано
 
-The primary classification task covers Bi, Cr, and Fe. Additional cobalt, aluminum, and reference measurements are registered for exploratory analysis but are not included in the classifier.
+- 24 файла Bi/Cr/Fe: по два канала 12 серий.
+- Шесть файлов XXX01C01–C06: reference, без автоматического включения в обучение.
+- CO105C01/C02, AL103C01/C02 и COB01C01/C02/C03: exploratory.
 
-## Dataset
+Отсутствующие зарегистрированные файлы пропускаются и отмечаются в file_inventory.csv.
+Ag, Pt и другие серии не добавлены автоматически: нужны согласованные метаданные.
 
-The configuration registers 37 source files:
+Входные файлы можно расположить непосредственно в data/q00/ или в подпапках годов.
+Дубли одного имени в нескольких подпапках вызывают ошибку.
 
-| Material or group | Measurement series | Channels | Files | Role |
-|---|---|---|---:|---|
-| Bismuth — Bi | `BI202`, `BI304` | `C01`, `C02` | 4 | Baseline |
-| Chromium — Cr | `CR202`, `CR304` | `C01`, `C02` | 4 | Baseline |
-| Iron — Fe | `FE202`, `FE104` | `C01`, `C02` | 4 | Baseline |
-| Bismuth — Bi | `BI105`, `BI106` | `C01`, `C02` | 4 | Comparison |
-| Chromium — Cr | `CR205`, `CR206` | `C01`, `C02` | 4 | Comparison |
-| Iron — Fe | `FE105`, `FE106` | `C01`, `C02` | 4 | Comparison |
-| Reference | `XXX01` | `C01`–`C06` | 6 | Reference |
-| Cobalt — Co | `CO105` | `C01`, `C02` | 2 | Exploratory |
-| Cobalt — Co | `COB01` | `C01`–`C03` | 3 | Exploratory |
-| Aluminum — Al | `AL103` | `C01`, `C02` | 2 | Exploratory |
-| Total | | | 37 | |
+## Разметка и ограничения
 
-Each source file represents a measurement channel, not necessarily an independent physical sample.
+baseline — прежние серии 2005 года Bi/Cr/Fe, используемые как аналитическая обучающая база.
+comparison — прежние серии 2006 года. Это НЕ доказанный статус облучения.
+irradiated=None до подтверждения журналом; выставляйте True/False только по документам.
+used_for_training сохраняет прежний аналитический отбор, но не утверждает физическую стабильность.
+Если такой отбор не обоснован журналом, оценку нельзя интерпретировать как распознавание стабильных плёнок.
 
-### Analytical Roles
+C01/C02 Bi/Cr/Fe обозначены разными каналами; режим регулирования неизвестен.
+Для CO105 и AL103 режимы взяты из описания: C01 unregulated, C02 regulated.
+year — метка каталога исходной таблицы, не вычисленный календарный год из JD.
+Даты из прежних ответов не перенесены: они не были надёжно проверены.
 
-- `baseline` — Bi/Cr/Fe series selected as the training dataset.
-- `comparison` — Bi/Cr/Fe series analyzed using the trained classifier.
-- `reference` — reference measurements excluded from classification.
-- `exploratory` — additional measurements reserved for separate investigation.
+experiment_id объединяет каналы одной серии. Независимость серий/образцов требует проверки.
+Если несколько серий относятся к одному физическому образцу, нужен более широкий идентификатор группы.
+Синхронные кампании разных материалов могут требовать отдельного разделения по сеансам.
 
-These roles describe how the pipeline uses the data. They do not establish physical stability or irradiation status.
+## Признаки
 
-### Input File Layout
+Окно 128 точек, перекрытие 50%, удаление линейного тренда, Blackman и rFFT.
+gamma — знаковый наклон log(power) от log(frequency).
+energy — среднее положительных ненулевых частотных компонент |FFT|², как в предыдущем коде;
+это не нормированная PSD и не интегральная физическая энергия.
+log_energy = log10(energy); недопустимые значения не заменяются искусственным минимумом.
+Частоты из таблицы являются средней оценкой по файлу; постоянство шага внутри записей нужно проверить.
 
-Place source files in `data/q00/`, either directly or in year-based subdirectories:
+В CSV добавлены experiment_id, channel, record_index, sample_start,
+analysis_role, control_mode, measurement_type, electrode_distance_mm.
+Расстояние электродов COB01 размечено только в C03 по номерам записей, начиная с 1.
 
-```text
-data/
-└── q00/
-    ├── 2004/
-    │   ├── AL103C01.Q00
-    │   ├── AL103C02.Q00
-    │   └── ...
-    ├── 2005/
-    │   ├── BI202C01.Q00
-    │   ├── BI202C02.Q00
-    │   └── ...
-    └── 2006/
-        ├── BI105C01.Q00
-        ├── BI105C02.Q00
-        └── ...
-```
-
-Missing registered files are skipped and recorded in `file_inventory.csv`. Duplicate source filenames in different locations trigger an error.
-
-## Signal Processing
-
-Processing is implemented in `src/signal_processing.py`.
-
-For each measurement record, the pipeline:
-
-1. Reads calibration coefficients, metadata, and raw ADC codes.
-2. Splits the signal into 128-point windows with 50% overlap.
-3. Removes a linear trend from each window.
-4. Applies the existing calibration-based scaling.
-5. Applies a Blackman window.
-6. Computes a real-valued fast Fourier transform (`rFFT`).
-7. Extracts spectral features and saves the results.
-
-Windows remain within individual record boundaries.
-
-### Spectral Features
-
-| Feature | Definition |
-|---|---|
-| `gamma` | Signed slope of `log(power)` versus `log(frequency)` |
-| `energy` | Mean positive squared FFT magnitude at nonzero frequencies |
-| `log_energy` | Base-10 logarithm of `energy` |
-
-The `gamma` convention is:
-
-\[
-\log P(f) = \gamma \log f + C
-\]
-
-A decreasing spectrum therefore has a negative slope.
-
-`energy` is an implementation-specific, unnormalized FFT-power feature. It is not a normalized power spectral density or an integrated physical energy.
-
-Sampling frequencies are configured per file using the values provided in the measurement inventory.
-
-### Channel-Aware Metadata
-
-Each feature row preserves:
-
-- Source filename and material label.
-- Measurement-series identifier: `experiment_id`.
-- Acquisition channel: `channel`.
-- Record number: `record_index`.
-- Window start index within the record: `sample_start`.
-- Sampling frequency and processing parameters.
-- Analytical role and available experimental metadata.
-
-For `COB01C03`, electrode separation is assigned using the documented record ranges:
-
-| Record numbers, inclusive | Electrode separation |
-|---|---:|
-| 1–114 | 16 mm |
-| 115–180 | 5 mm |
-| 181–238 | 1 mm |
-| 239–358 | 10 mm |
-| 359–480 | 3 mm |
-
-## Model Evaluation
-
-The classifiers use two input features:
-
-```text
-gamma
-log_energy
-```
-
-### Supervised Models
-
-- K-nearest neighbors — distance-weighted classification baseline.
-- Multilayer perceptron — fully connected neural network.
-
-Both models use feature standardization within their training pipelines.
-
-### Grouped Cross-Validation
-
-Evaluation uses `StratifiedGroupKFold` with `experiment_id` as the grouping variable.
-
-All windows and channels belonging to the same measurement series remain together. A series cannot appear in both the training and test partitions of a fold.
-
-The current baseline configuration contains two series per material, resulting in two-fold grouped evaluation.
-
-`StandardScaler` is fitted only on the training partition of each fold. The MLP uses `early_stopping=False` to avoid an additional internal random validation split.
-
-Reported classification metrics include:
-
-- Accuracy.
-- Balanced accuracy.
-- Precision, recall, and F1-score.
-- Confusion matrices based on out-of-fold predictions.
-
-Metrics are calculated at the window level, not at the level of independent physical samples.
-
-### Exploratory Clustering
-
-K-Means provides an exploratory view of the standardized feature space.
-
-Clustering quality is summarized using the silhouette score. Cluster identifiers are not material labels, and the silhouette score is reported separately from classification accuracy.
-
-### Comparison-Series Analysis
-
-After cross-validation, a final MLP is trained on all eligible baseline rows and applied to the comparison series.
-
-The pipeline saves:
-
-- Per-window material predictions.
-- Maximum predicted class probabilities.
-- File-level feature statistics.
-- Majority-vote material predictions.
-- Fractions of predictions matching the majority vote and source material label.
-
-The console displays one summary row per file rather than every individual window.
-
-## Installation and Usage
-
-### Requirements
-
-- Python with `venv` and `pip`.
-- Git and Git LFS when cloning the repository with its source data.
-- Dependencies listed in `requirements.txt`.
-
-### Obtain the Project
-
-Clone the repository using its HTTPS URL, then open PowerShell in the cloned project directory.
-
-Retrieve the source measurement files through Git LFS:
-
-```powershell
-git lfs install
-git lfs pull
-```
-
-### Create the Environment
+## Установка и запуск (PowerShell, из корня проекта)
 
 ```powershell
 python -m venv .venv
-
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-The following commands use the environment's Python executable directly, so activation and changes to PowerShell's execution policy are unnecessary.
-
-### Build the Feature Dataset
-
-```powershell
 .\.venv\Scripts\python.exe src/signal_processing.py
-```
-
-### Evaluate Models and Generate Plots
-
-```powershell
 .\.venv\Scripts\python.exe src/train_models.py
-```
-
-### Open the Notebooks
-
-```powershell
 .\.venv\Scripts\python.exe -m notebook
 ```
 
-Run the notebooks in this order:
+Команды не требуют активации окружения или изменения ExecutionPolicy.
+Ноутбуки открывайте из этого сервера, используя ядро установленного окружения.
+После замены скриптов перезапустите ядра ранее открытых ноутбуков.
+Первый ноутбук по умолчанию загружает готовый CSV; для пересборки установите REBUILD=True.
 
-1. `notebooks/01_signal_processing.ipynb`
-2. `notebooks/02_train_models.ipynb`
+## Оценка
 
-Use the kernel associated with the project environment.
+StratifiedGroupKFold по experiment_id, сейчас 2 fold для двух baseline-серий каждого класса.
+Каналы одной серии не пересекаются между train/test. StandardScaler обучается внутри fold.
+Точность считается по окнам, не по независимым физическим образцам.
+MLP early_stopping=False: нет скрытого случайного разбиения связанных окон для ранней остановки.
+После оценки финальный MLP обучается на всех baseline-строках.
+Дополнительные материалы пока не включаются в общую модель.
 
-The first notebook loads an existing feature dataset by default. Set `REBUILD = True` to regenerate it after changing metadata or processing parameters.
+## Выходные файлы
 
-Restart notebook kernels after modifying imported Python modules.
+- data/processed/conductivity_features.csv
+- data/processed/file_inventory.csv
+- data/processed/*_features.csv
+- results/metrics/model_metrics.csv — классификация по fold.
+- results/metrics/evaluation_splits.csv — состав групп.
+- results/metrics/out_of_fold_predictions.csv
+- results/metrics/knn_classification_report.csv
+- results/metrics/mlp_classification_report.csv
+- results/metrics/clustering_metrics.csv — silhouette отдельно от accuracy.
+- results/metrics/comparison_film_predictions.csv — все окна сравниваемых серий.
+- results/metrics/comparison_file_summary.csv — одна строка на файл.
+- results/metrics/irradiated_film_predictions.csv — только подтверждённо облучённые строки.
+- results/metrics/file_feature_summary.csv
+- results/figures/knn_confusion_matrix.png
+- results/figures/mlp_confusion_matrix.png
+- results/figures/kmeans_clusters.png
+- results/figures/file_level_gamma_comparison.png
+- results/figures/file_level_energy_comparison.png
+- results/figures/gamma_boxplots_by_file.png
+- results/figures/energy_boxplots_by_file.png
 
-## Results and Outputs
+Графики разделены по материалу и каналу. Панели имеют независимые y-шкалы — сравнивайте подписи осей.
+Error bars показывают SD окон внутри файла, не доверительные интервалы.
+Boxplot скрывает выбросы только на рисунке; исходные данные не удаляются.
+Высокая вероятность класса не является доказательством отсутствия радиационного эффекта.
+Старые изображения из прежних запусков автоматически не удаляются.
 
-The pipeline generates the following output groups:
+## Проверка перед научной интерпретацией
 
-| Directory | Contents |
-|---|---|
-| `data/processed/` | Per-file features, combined dataset, and source-file inventory |
-| `results/metrics/` | Cross-validation metrics, predictions, and file-level summaries |
-| `results/figures/` | Confusion matrices, clustering plots, and feature comparisons |
-
-### Main Data Files
-
-- `conductivity_features.csv` — combined feature dataset.
-- `file_inventory.csv` — availability and processing status of registered files.
-
-### Main Evaluation Files
-
-- `model_metrics.csv` — classification metrics for each fold.
-- `evaluation_splits.csv` — measurement-series assignments.
-- `out_of_fold_predictions.csv` — predictions for held-out windows.
-- `comparison_file_summary.csv` — one summary row per comparison file.
-- `comparison_film_predictions.csv` — detailed comparison-series predictions.
-- `file_feature_summary.csv` — file-level spectral feature statistics.
-
-`irradiated_film_predictions.csv` includes only rows explicitly marked `irradiated=True`. If no irradiation status has been confirmed, the file contains headers but no prediction rows.
-
-### Main Figures
-
-- KNN and MLP confusion matrices.
-- Exploratory K-Means clustering.
-- File-level mean ± standard deviation comparisons.
-- File-level feature-distribution boxplots.
-
-Comparison plots are separated by material and channel. Panels use independent y-axis scales.
-
-Error bars show within-file window standard deviations, not confidence intervals. Boxplots hide outliers only in the visualization; the underlying data are retained.
-
-Images from previous runs are not automatically deleted.
-
-## Project Structure
-
-```text
-.
-├── data/
-│   ├── q00/
-│   └── processed/
-├── notebooks/
-│   ├── 01_signal_processing.ipynb
-│   └── 02_train_models.ipynb
-├── results/
-│   ├── figures/
-│   └── metrics/
-├── src/
-│   ├── dataset_config.py
-│   ├── signal_processing.py
-│   └── train_models.py
-├── .gitattributes
-├── .gitignore
-├── README.md
-└── requirements.txt
-```
-
-File metadata and shared settings are maintained in `src/dataset_config.py`.
-
-The notebooks reuse functions from the Python modules rather than maintaining separate processing and training implementations.
-
-## Limitations and Experimental Metadata
-
-The following limitations must be considered when interpreting results:
-
-- Irradiation status remains unknown until verified against the experimental log. Baseline and comparison roles must not be treated as confirmed irradiation labels.
-- Bi/Cr/Fe `C01` and `C02` represent different channels, but their regulation modes have not been established.
-- For `CO105` and `AL103`, the documented channel modes are `C01 = unregulated` and `C02 = regulated`.
-- Measurement series are used as validation groups, but independence of physical samples must be verified. Multiple series from one sample require a broader grouping identifier.
-- Synchronized acquisition sessions across materials may require additional session-based validation.
-- Sampling frequencies are file-level average estimates. Uniform timing within records must be checked.
-- The configured `year` field is a source-directory label, not a calendar year converted from Julian dates.
-- Calibration assumptions and the binary Q00 structure must be verified against instrument documentation.
-- The spectral slope is fitted across all usable nonzero FFT frequencies, not a separately validated 1/f frequency band.
-- A high predicted class probability does not demonstrate the absence of irradiation-induced or other physical changes.
-
-## Validation Status
-
-The Python scripts and notebook code cells have been checked for syntax.
-
-End-to-end execution on the complete source dataset and scientific validation of the resulting models remain to be verified.
-
-No numerical performance claims are made in this README.
-
-## Data Availability and Licensing
-
-The repository is configured to track source `.Q00` files using Git LFS.
-
-Generated feature datasets and large per-window prediction tables are excluded from version control and can be regenerated using the processing scripts.
-
-Source-data redistribution permissions and the licensing terms for code and measurements must be confirmed and documented before public release.
+Нужно подтвердить калибровку и структуру Q00, режимы каналов Bi/Cr/Fe,
+независимость образцов, статусы и моменты облучения, постоянство временного шага.
+Код проверен синтаксически; обработка ваших бинарных файлов и обучение в этой поставке не запускались.

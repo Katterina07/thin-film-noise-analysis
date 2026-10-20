@@ -1,0 +1,13 @@
+fold,partition,experiment_id
+1,train,BI202
+1,train,CR202
+1,train,FE104
+1,test,BI304
+1,test,CR304
+1,test,FE202
+2,train,BI304
+2,train,CR304
+2,train,FE202
+2,test,BI202
+2,test,CR202
+2,test,FE104
