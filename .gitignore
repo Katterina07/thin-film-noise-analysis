@@ -1,0 +1,79 @@
+# ============================================================
+# Python environments
+# ============================================================
+.venv/
+venv/
+env/
+ENV/
+
+# ============================================================
+# Python caches and tooling
+# ============================================================
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# ============================================================
+# Jupyter temporary files
+# Keep the actual .ipynb notebooks in Git
+# ============================================================
+.ipynb_checkpoints/
+.jupyter/
+
+# ============================================================
+# Local editor settings
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============================================================
+# Secrets and local environment variables
+# ============================================================
+.env
+.env.*
+!.env.example
+
+# ============================================================
+# Operating system files
+# ============================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ============================================================
+# Logs and temporary files
+# ============================================================
+*.log
+*.tmp
+*.temp
+
+# ============================================================
+# Generated feature datasets
+# Recreated by src/signal_processing.py
+# Keep an optional placeholder for the directory
+# ============================================================
+/data/processed/*
+!/data/processed/.gitkeep
+
+# ============================================================
+# Large per-window predictions
+# Keep compact summaries and metrics in Git
+# ============================================================
+/results/metrics/out_of_fold_predictions.csv
+/results/metrics/comparison_film_predictions.csv
+/results/metrics/irradiated_film_predictions.csv
+
+# ============================================================
+# Local project archives
+# ============================================================
+*.zip
+*.7z
+*.rar
