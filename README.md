@@ -63,7 +63,7 @@ python -m venv .venv
 
 The commands do not require environment activation or changes to the PowerShell execution policy.
 
-Open notebooks from the started Jupyter server and select the kernel associated with the installed environment. After replacing scripts, restart the kernels of previously opened notebooks.
+Open notebooks from the started Jupyter server and select the kernel associated with the installed environment.
 
 By default, the first notebook loads the existing processed CSV file. Set `REBUILD=True` to reconstruct the dataset.
 
