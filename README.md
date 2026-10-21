@@ -166,14 +166,20 @@ A high predicted class probability does not prove the absence of a radiation-ind
 
 Old images from previous runs are not automatically removed.
 
-## Before scientific interpretation
+## Known limitations
 
-The following points must be verified before drawing scientific conclusions:
+The following points have not been verified, so the results should be
+interpreted as a methodological demonstration rather than as physical conclusions.
 
-- Q00 calibration and file structure.
-- Operating regimes of the Bi/Cr/Fe channels.
-- Independence of samples and experimental series.
-- Irradiation statuses and irradiation dates.
-- Constancy of the time step within recordings.
-
-The results presented in this README were obtained by running the current version of the pipeline on the original Q00 files. Since the source data has since been deleted, a full re-run from scratch is no longer possible. The processed features and metrics have been saved in `data/processed/` and `results/metrics/`, respectively.
+- **Independence of series.** Windows overlap by 50%, and it is not confirmed that
+  different series come from different physical samples. Window-level accuracy
+  may therefore be optimistic.
+- **Channel regimes.** The operating regimes of the Bi/Cr/Fe channels (C01 vs C02)
+  are unknown.
+- **Irradiation dates.** Irradiation status is taken from the laboratory records
+  (not included in this repository); irradiation dates are not documented,
+  so no conclusions about dose or time-dependent effects are drawn.
+- **Sampling step.** Frequencies are computed from the file-level average time step;
+  its constancy within a recording was not checked.
+- **Calibration.** Q00 calibration and file structure follow the original processing
+  code and were not re-checked.
