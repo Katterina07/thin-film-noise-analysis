@@ -1,7 +1,11 @@
 # Thin-film noise analysis: grouped evaluation
 
 Processing of binary Q00 recordings, spectral feature extraction, and group-aware classification of Bi/Cr/Fe thin-film samples.
-In https://github.com/Katterina07/conductivity-fluctuation-analysis models were trained and evaluated primarily using the 2005 baseline series (Bi/Cr/Fe). The second project incorporates the 2006 series, modal recordings XXX01C01–C06, and the exploratory series CO105, AL103, and COB01. This makes it possible to verify whether the spectral differences identified between materials hold true for new data, rather than just for the original training set.
+
+This project extends [conductivity-fluctuation-analysis](https://github.com/Katterina07/conductivity-fluctuation-analysis),
+where the models were trained and evaluated on the 2005 baseline series (Bi/Cr/Fe) with a random split.
+Here the evaluation is grouped by experimental series, and the registry also covers the 2006 series,
+the XXX01C01–C06 recordings and the exploratory series CO105, AL103 and COB01 (not used for training). With grouped evaluation the MLP reaches about 53% accuracy, compared with about 88% for a random split.
 
 
 ## Project structure
@@ -15,7 +19,7 @@ In https://github.com/Katterina07/conductivity-fluctuation-analysis models were 
 ## Registered data
 
 - 24 Bi/Cr/Fe files: two channels for each of 12 experimental series.
-- Six `XXX01C01`–`XXX01C06` files are modal recordings and are not automatically included in model training.
+- Six `XXX01C01`–`XXX01C06` files are reference recordings and are not automatically included in model training.
 - `CO105C01/C02`, `AL103C01/C02`, and `COB01C01/C02/C03` are exploratory recordings.
 - Missing registered files are skipped and marked in `file_inventory.csv`.
 - Ag, Pt, and other series are not added automatically because consistent metadata are required.
@@ -26,16 +30,13 @@ In https://github.com/Katterina07/conductivity-fluctuation-analysis models were 
 
 - `baseline` refers to the earlier 2005 Bi/Cr/Fe series and is used as the analytical training base.
 - `comparison` refers to the earlier 2006 series. This does not establish an irradiation status.
-- `irradiated=None` until confirmed from laboratory records; set `True` or `False` only based on documented evidence.
+- `irradiated=None`: the status is known from laboratory records (not included in this repository), but it has not yet been entered in the config.
 - `used_for_training` preserves the previous analytical selection but does not establish physical stability.
 - If this selection is not supported by laboratory records, the evaluation cannot be interpreted as recognition of stable films.
-- `C01` and `C02` for Bi/Cr/Fe are treated as different channels; their operating regimes are unknown.
 - For `CO105` and `AL103`, regimes are taken from the provided description: `C01` is unregulated and `C02` is regulated.
 - `year` is a label from the original catalogue table, not a calendar year calculated from Julian Date.
 - Dates of the experiments are not indicated in the table, as they have not been verified by laboratory records.
-- `experiment_id` combines channels belonging to the same experimental series. The independence of series and physical samples requires verification.
-- If several series belong to the same physical sample, a broader group identifier is required.
-- Synchronous campaigns involving different materials may require separate session-based splits.
+- `experiment_id` combines channels belonging to the same experimental series.
 
 ## Features
 
@@ -45,9 +46,9 @@ In https://github.com/Katterina07/conductivity-fluctuation-analysis models were 
 - Blackman window.
 - Real FFT (`rFFT`).
 - `gamma`: signed slope of `log(power)` versus `log(frequency)`.
-- `energy`: mean of positive non-zero frequency components of `|FFT|^2`, following the previous implementation. It is not a normalized PSD and not an integrated physical energy.
+- `energy`: mean of positive non-zero frequency components of `|FFT|^2`, as in the earlier version of the code. It is not a normalized PSD and not an integrated physical energy.
 - `log_energy = log10(energy)`; invalid values are not artificially replaced by a minimum.
-- Frequencies in the table are file-level average estimates; constancy of the sampling step within recordings must be verified.
+- Frequencies in the table are file-level average estimates; constancy of the sampling step within recordings was not checked.
 - The CSV files include `experiment_id`, `channel`, `record_index`, `sample_start`, `analysis_role`, `control_mode`, `measurement_type`, and `electrode_distance_mm`.
 - Electrode distances for `COB01` are labelled only in `C03`, using record numbers starting from 1.
 
@@ -62,8 +63,6 @@ python -m venv .venv
 .\.venv\Scripts\python.exe src/train_models.py
 .\.venv\Scripts\python.exe -m notebook
 ```
-
-The commands do not require environment activation or changes to the PowerShell execution policy.
 
 Open notebooks from the started Jupyter server and select the kernel associated with the installed environment.
 
@@ -166,7 +165,6 @@ A high predicted class probability does not prove the absence of a radiation-ind
 - `results/figures/gamma_boxplots_by_file.png`
 - `results/figures/energy_boxplots_by_file.png`
 
-Old images from previous runs are not automatically removed.
 
 ## Known limitations
 
@@ -187,3 +185,12 @@ interpreted as a methodological demonstration rather than as physical conclusion
   its constancy within a recording was not checked.
 - **Calibration.** Q00 calibration and file structure follow the original processing
   code and were not re-checked.
+
+  ## Data availability
+
+Raw Q00 files are not included in this repository because they are unpublished
+experimental results. Processed features and results are provided to document
+the method. To rerun the pipeline, place the files in `data/q00/`.
+The MIT license applies to the code only.
+
+Last full run: 10.2026.
