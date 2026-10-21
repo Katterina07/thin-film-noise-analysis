@@ -86,10 +86,10 @@ By default, the first notebook loads the existing processed CSV file. Set `REBUI
 
 Two supervised models, KNN and MLP, were evaluated using the extracted spectral features. The MLP scored higher in this evaluation; with two folds the difference is not statistically assessed.
 
-| Model | Accuracy | Balanced accuracy |
-|---|---:|---:|
-| KNN | 43.49% | — |
-| MLP | 52.83% | — |
+| Model | Accuracy | 
+|---|---:|
+| KNN | 43.49% |
+| MLP | 52.83% |
 
 Per-fold results are available in `results/metrics/model_metrics.csv`.
 
