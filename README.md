@@ -1,6 +1,8 @@
-# Conductivity Fluctuation Analysis
+# Thin-film noise analysis: grouped evaluation
 
 Processing of binary Q00 recordings, spectral feature extraction, and group-aware classification of Bi/Cr/Fe thin-film samples.
+In https://github.com/Katterina07/conductivity-fluctuation-analysis models were trained and evaluated primarily using the 2005 baseline series (Bi/Cr/Fe). The second project incorporates the 2006 series, modal recordings XXX01C01–C06, and the exploratory series CO105, AL103, and COB01. This makes it possible to verify whether the spectral differences identified between materials hold true for new data, rather than just for the original training set.
+
 
 ## Project structure
 
@@ -13,7 +15,7 @@ Processing of binary Q00 recordings, spectral feature extraction, and group-awar
 ## Registered data
 
 - 24 Bi/Cr/Fe files: two channels for each of 12 experimental series.
-- Six `XXX01C01`–`XXX01C06` files are reference recordings and are not automatically included in model training.
+- Six `XXX01C01`–`XXX01C06` files are modal recordings and are not automatically included in model training.
 - `CO105C01/C02`, `AL103C01/C02`, and `COB01C01/C02/C03` are exploratory recordings.
 - Missing registered files are skipped and marked in `file_inventory.csv`.
 - Ag, Pt, and other series are not added automatically because consistent metadata are required.
