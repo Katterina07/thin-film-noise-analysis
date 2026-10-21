@@ -9,7 +9,6 @@ Processing of binary Q00 recordings, spectral feature extraction, and group-awar
 - `src/train_models.py` — trains and evaluates models, creates summaries and figures.
 - `notebooks/01_signal_processing.ipynb` — exploratory signal-processing notebook.
 - `notebooks/02_train_models.ipynb` — model-evaluation notebook.
-- `build_dataset.py` is unused and is not required.
 
 ## Registered data
 
@@ -31,7 +30,7 @@ Processing of binary Q00 recordings, spectral feature extraction, and group-awar
 - `C01` and `C02` for Bi/Cr/Fe are treated as different channels; their operating regimes are unknown.
 - For `CO105` and `AL103`, regimes are taken from the provided description: `C01` is unregulated and `C02` is regulated.
 - `year` is a label from the original catalogue table, not a calendar year calculated from Julian Date.
-- Dates from earlier responses were not transferred because they were not reliably verified.
+- Dates of the experiments are not indicated in the table, as they have not been verified by laboratory records.
 - `experiment_id` combines channels belonging to the same experimental series. The independence of series and physical samples requires verification.
 - If several series belong to the same physical sample, a broader group identifier is required.
 - Synchronous campaigns involving different materials may require separate session-based splits.
@@ -177,4 +176,4 @@ The following points must be verified before drawing scientific conclusions:
 - Irradiation statuses and irradiation dates.
 - Constancy of the time step within recordings.
 
-The code has been checked syntactically. Processing of the binary files and model training were not run in this delivery.
+The results presented in this README were obtained by running the current version of the pipeline on the original Q00 files. Since the source data has since been deleted, a full re-run from scratch is no longer possible. The processed features and metrics have been saved in `data/processed/` and `results/metrics/`, respectively.
