@@ -1,114 +1,360 @@
-# Conductivity fluctuation analysis
+# \# Conductivity Fluctuation Analysis
 
-Обработка бинарных Q00, признаки спектра и групповая оценка классификации Bi/Cr/Fe.
+# 
 
-## Структура
+# Processing of binary Q00 recordings, spectral feature extraction, and group-aware classification of Bi/Cr/Fe thin-film samples.
 
-- src/dataset_config.py — общий реестр файлов, каналов и настроек.
-- src/signal_processing.py — чтение Q00 и построение CSV.
-- src/train_models.py — оценка моделей, сводки и графики.
-- notebooks/01_signal_processing.ipynb — исследование обработки.
-- notebooks/02_train_models.ipynb — оценка моделей.
+# 
 
-build_dataset.py не используется и не нужен.
+# \## Project structure
 
-## Что зарегистрировано
+# 
 
-- 24 файла Bi/Cr/Fe: по два канала 12 серий.
-- Шесть файлов XXX01C01–C06: reference, без автоматического включения в обучение.
-- CO105C01/C02, AL103C01/C02 и COB01C01/C02/C03: exploratory.
+# \- `src/dataset\_config.py` — central registry of files, channels, and analysis settings.
 
-Отсутствующие зарегистрированные файлы пропускаются и отмечаются в file_inventory.csv.
-Ag, Pt и другие серии не добавлены автоматически: нужны согласованные метаданные.
+# \- `src/signal\_processing.py` — reads Q00 recordings and creates processed CSV files.
 
-Входные файлы можно расположить непосредственно в data/q00/ или в подпапках годов.
-Дубли одного имени в нескольких подпапках вызывают ошибку.
+# \- `src/train\_models.py` — trains and evaluates models, creates summaries and figures.
 
-## Разметка и ограничения
+# \- `notebooks/01\_signal\_processing.ipynb` — exploratory signal-processing notebook.
 
-baseline — прежние серии 2005 года Bi/Cr/Fe, используемые как аналитическая обучающая база.
-comparison — прежние серии 2006 года. Это НЕ доказанный статус облучения.
-irradiated=None до подтверждения журналом; выставляйте True/False только по документам.
-used_for_training сохраняет прежний аналитический отбор, но не утверждает физическую стабильность.
-Если такой отбор не обоснован журналом, оценку нельзя интерпретировать как распознавание стабильных плёнок.
+# \- `notebooks/02\_train\_models.ipynb` — model-evaluation notebook.
 
-C01/C02 Bi/Cr/Fe обозначены разными каналами; режим регулирования неизвестен.
-Для CO105 и AL103 режимы взяты из описания: C01 unregulated, C02 regulated.
-year — метка каталога исходной таблицы, не вычисленный календарный год из JD.
-Даты из прежних ответов не перенесены: они не были надёжно проверены.
+# \- `build\_dataset.py` is unused and is not required.
 
-experiment_id объединяет каналы одной серии. Независимость серий/образцов требует проверки.
-Если несколько серий относятся к одному физическому образцу, нужен более широкий идентификатор группы.
-Синхронные кампании разных материалов могут требовать отдельного разделения по сеансам.
+# 
 
-## Признаки
+# \## Registered data
 
-Окно 128 точек, перекрытие 50%, удаление линейного тренда, Blackman и rFFT.
-gamma — знаковый наклон log(power) от log(frequency).
-energy — среднее положительных ненулевых частотных компонент |FFT|², как в предыдущем коде;
-это не нормированная PSD и не интегральная физическая энергия.
-log_energy = log10(energy); недопустимые значения не заменяются искусственным минимумом.
-Частоты из таблицы являются средней оценкой по файлу; постоянство шага внутри записей нужно проверить.
+# 
 
-В CSV добавлены experiment_id, channel, record_index, sample_start,
-analysis_role, control_mode, measurement_type, electrode_distance_mm.
-Расстояние электродов COB01 размечено только в C03 по номерам записей, начиная с 1.
+# \- 24 Bi/Cr/Fe files: two channels for each of 12 experimental series.
 
-## Установка и запуск (PowerShell, из корня проекта)
+# \- Six `XXX01C01`–`XXX01C06` files are reference recordings and are not automatically included in model training.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe src/signal_processing.py
-.\.venv\Scripts\python.exe src/train_models.py
-.\.venv\Scripts\python.exe -m notebook
-```
+# \- `CO105C01/C02`, `AL103C01/C02`, and `COB01C01/C02/C03` are exploratory recordings.
 
-Команды не требуют активации окружения или изменения ExecutionPolicy.
-Ноутбуки открывайте из этого сервера, используя ядро установленного окружения.
-После замены скриптов перезапустите ядра ранее открытых ноутбуков.
-Первый ноутбук по умолчанию загружает готовый CSV; для пересборки установите REBUILD=True.
+# \- Missing registered files are skipped and marked in `file\_inventory.csv`.
 
-## Оценка
+# \- Ag, Pt, and other series are not added automatically because consistent metadata are required.
 
-StratifiedGroupKFold по experiment_id, сейчас 2 fold для двух baseline-серий каждого класса.
-Каналы одной серии не пересекаются между train/test. StandardScaler обучается внутри fold.
-Точность считается по окнам, не по независимым физическим образцам.
-MLP early_stopping=False: нет скрытого случайного разбиения связанных окон для ранней остановки.
-После оценки финальный MLP обучается на всех baseline-строках.
-Дополнительные материалы пока не включаются в общую модель.
+# \- Input Q00 files may be placed directly in `data/q00/` or in year-based subfolders.
 
-## Выходные файлы
+# \- Duplicate file names in different subfolders cause an error.
 
-- data/processed/conductivity_features.csv
-- data/processed/file_inventory.csv
-- data/processed/*_features.csv
-- results/metrics/model_metrics.csv — классификация по fold.
-- results/metrics/evaluation_splits.csv — состав групп.
-- results/metrics/out_of_fold_predictions.csv
-- results/metrics/knn_classification_report.csv
-- results/metrics/mlp_classification_report.csv
-- results/metrics/clustering_metrics.csv — silhouette отдельно от accuracy.
-- results/metrics/comparison_film_predictions.csv — все окна сравниваемых серий.
-- results/metrics/comparison_file_summary.csv — одна строка на файл.
-- results/metrics/irradiated_film_predictions.csv — только подтверждённо облучённые строки.
-- results/metrics/file_feature_summary.csv
-- results/figures/knn_confusion_matrix.png
-- results/figures/mlp_confusion_matrix.png
-- results/figures/kmeans_clusters.png
-- results/figures/file_level_gamma_comparison.png
-- results/figures/file_level_energy_comparison.png
-- results/figures/gamma_boxplots_by_file.png
-- results/figures/energy_boxplots_by_file.png
+# 
 
-Графики разделены по материалу и каналу. Панели имеют независимые y-шкалы — сравнивайте подписи осей.
-Error bars показывают SD окон внутри файла, не доверительные интервалы.
-Boxplot скрывает выбросы только на рисунке; исходные данные не удаляются.
-Высокая вероятность класса не является доказательством отсутствия радиационного эффекта.
-Старые изображения из прежних запусков автоматически не удаляются.
+# \## Labels and limitations
 
-## Проверка перед научной интерпретацией
+# 
 
-Нужно подтвердить калибровку и структуру Q00, режимы каналов Bi/Cr/Fe,
-независимость образцов, статусы и моменты облучения, постоянство временного шага.
-Код проверен синтаксически; обработка ваших бинарных файлов и обучение в этой поставке не запускались.
+# \- `baseline` refers to the earlier 2005 Bi/Cr/Fe series and is used as the analytical training base.
+
+# \- `comparison` refers to the earlier 2006 series. This does \*\*not\*\* establish an irradiation status.
+
+# \- `irradiated=None` until confirmed from laboratory records; set `True` or `False` only based on documented evidence.
+
+# \- `used\_for\_training` preserves the previous analytical selection but does not establish physical stability.
+
+# \- If this selection is not supported by laboratory records, the evaluation cannot be interpreted as recognition of stable films.
+
+# \- `C01` and `C02` for Bi/Cr/Fe are treated as different channels; their operating regimes are unknown.
+
+# \- For `CO105` and `AL103`, regimes are taken from the provided description: `C01` is unregulated and `C02` is regulated.
+
+# \- `year` is a label from the original catalogue table, not a calendar year calculated from Julian Date.
+
+# \- Dates from earlier responses were not transferred because they were not reliably verified.
+
+# \- `experiment\_id` combines channels belonging to the same experimental series. The independence of series and physical samples requires verification.
+
+# \- If several series belong to the same physical sample, a broader group identifier is required.
+
+# \- Synchronous campaigns involving different materials may require separate session-based splits.
+
+# 
+
+# \## Features
+
+# 
+
+# \- Window length: 128 points.
+
+# \- Window overlap: 50%.
+
+# \- Linear trend removal.
+
+# \- Blackman window.
+
+# \- Real FFT (`rFFT`).
+
+# \- `gamma`: signed slope of `log(power)` versus `log(frequency)`.
+
+# \- `energy`: mean of positive non-zero frequency components of \\(|\\mathrm{FFT}|^2\\), following the previous implementation. It is not a normalized PSD and not an integrated physical energy.
+
+# \- `log\_energy = log10(energy)`; invalid values are not artificially replaced by a minimum.
+
+# \- Frequencies in the table are file-level average estimates; constancy of the sampling step within recordings must be verified.
+
+# \- The CSV files include `experiment\_id`, `channel`, `record\_index`, `sample\_start`, `analysis\_role`, `control\_mode`, `measurement\_type`, and `electrode\_distance\_mm`.
+
+# \- Electrode distances for `COB01` are labelled only in `C03`, using record numbers starting from 1.
+
+# 
+
+# \## Installation and usage
+
+# 
+
+# Run the following commands from the project root in PowerShell:
+
+# 
+
+# ```powershell
+
+# python -m venv .venv
+
+# .\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt
+
+# .\\.venv\\Scripts\\python.exe src/signal\_processing.py
+
+# .\\.venv\\Scripts\\python.exe src/train\_models.py
+
+# .\\.venv\\Scripts\\python.exe -m notebook
+
+# ```
+
+# 
+
+# The commands do not require environment activation or changes to the PowerShell execution policy.
+
+# 
+
+# Open notebooks from the started Jupyter server and select the kernel associated with the installed environment. After replacing scripts, restart the kernels of previously opened notebooks.
+
+# 
+
+# By default, the first notebook loads the existing processed CSV file. Set `REBUILD=True` to reconstruct the dataset.
+
+# 
+
+# \## Evaluation protocol
+
+# 
+
+# \- `StratifiedGroupKFold` is used with `experiment\_id` as the grouping variable.
+
+# \- The current configuration uses two folds for the two baseline series of each class.
+
+# \- Channels from the same experimental series do not appear in both training and test sets.
+
+# \- `StandardScaler` is fitted within each fold.
+
+# \- Accuracy is calculated at the window level, not at the level of independent physical samples.
+
+# \- MLP uses `early\_stopping=False`, avoiding a hidden random split of related windows for early stopping.
+
+# \- After evaluation, the final MLP is trained on all baseline rows.
+
+# \- Additional materials are not included in the main model.
+
+# 
+
+# \## Results
+
+# 
+
+# \### Classification models
+
+# 
+
+# Two supervised models, KNN and MLP, were evaluated using the extracted spectral features. The MLP achieved higher overall performance than KNN.
+
+# 
+
+# | Model | Accuracy | Balanced accuracy |
+
+# |---|---:|---:|
+
+# | KNN | 43.49% | — |
+
+# | MLP | 52.83% | — |
+
+# 
+
+# Per-fold results are available in `results/metrics/model\_metrics.csv`.
+
+# 
+
+# \### KNN classification report
+
+# 
+
+# | Class | Precision | Recall | F1-score |
+
+# |---|---:|---:|---:|
+
+# | BI | 0.377 | 0.766 | 0.505 |
+
+# | CR | 0.230 | 0.092 | 0.132 |
+
+# | FE | 0.785 | 0.447 | 0.570 |
+
+# 
+
+# KNN reached an overall accuracy of 43.49%. It identified the BI class with relatively high recall but performed poorly on the CR class.
+
+# 
+
+# \### MLP classification report
+
+# 
+
+# | Class | Precision | Recall | F1-score |
+
+# |---|---:|---:|---:|
+
+# | BI | 0.399 | 0.781 | 0.528 |
+
+# | CR | 0.410 | 0.087 | 0.144 |
+
+# | FE | 0.864 | 0.716 | 0.783 |
+
+# 
+
+# The MLP reached an overall accuracy of 52.83%. It showed the strongest performance for the FE class, with precision of 0.864, recall of 0.716, and an F1-score of 0.783. As with KNN, the CR class remained the most difficult to classify.
+
+# 
+
+# \### Clustering
+
+# 
+
+# KMeans clustering produced a silhouette score of 0.556, indicating moderate separation between the identified clusters.
+
+# 
+
+# \## Figures
+
+# 
+
+# \### Energy and gamma distributions
+
+# 
+
+# !\[Energy boxplots by file](results/figures/energy\_boxplots\_by\_file.png)
+
+# 
+
+# !\[Gamma boxplots by file](results/figures/gamma\_boxplots\_by\_file.png)
+
+# 
+
+# \### File-level comparison
+
+# 
+
+# !\[File-level energy comparison](results/figures/file\_level\_energy\_comparison.png)
+
+# 
+
+# !\[File-level gamma comparison](results/figures/file\_level\_gamma\_comparison.png)
+
+# 
+
+# \### Classification results
+
+# 
+
+# !\[KNN confusion matrix](results/figures/knn\_confusion\_matrix.png)
+
+# 
+
+# !\[MLP confusion matrix](results/figures/mlp\_confusion\_matrix.png)
+
+# 
+
+# Figures are separated by material and channel. Panels use independent y-axis scales; compare axis labels carefully.
+
+# 
+
+# Error bars represent the standard deviation across windows within a file, not confidence intervals. Box plots hide outliers only for visualization; the underlying data are not removed.
+
+# 
+
+# A high predicted class probability does not prove the absence of a radiation-induced effect.
+
+# 
+
+# \## Output files
+
+# 
+
+# \- `data/processed/conductivity\_features.csv`
+
+# \- `data/processed/file\_inventory.csv`
+
+# \- `data/processed/\*\_features.csv`
+
+# \- `results/metrics/model\_metrics.csv` — per-fold classification metrics.
+
+# \- `results/metrics/evaluation\_splits.csv` — group composition.
+
+# \- `results/metrics/out\_of\_fold\_predictions.csv`
+
+# \- `results/metrics/knn\_classification\_report.csv`
+
+# \- `results/metrics/mlp\_classification\_report.csv`
+
+# \- `results/metrics/clustering\_metrics.csv` — silhouette score, reported separately from classification accuracy.
+
+# \- `results/metrics/comparison\_film\_predictions.csv` — predictions for all windows in comparison series.
+
+# \- `results/metrics/comparison\_file\_summary.csv` — one row per file.
+
+# \- `results/metrics/irradiated\_film\_predictions.csv` — only confirmed irradiated rows.
+
+# \- `results/metrics/file\_feature\_summary.csv`
+
+# \- `results/figures/knn\_confusion\_matrix.png`
+
+# \- `results/figures/mlp\_confusion\_matrix.png`
+
+# \- `results/figures/kmeans\_clusters.png`
+
+# \- `results/figures/file\_level\_gamma\_comparison.png`
+
+# \- `results/figures/file\_level\_energy\_comparison.png`
+
+# \- `results/figures/gamma\_boxplots\_by\_file.png`
+
+# \- `results/figures/energy\_boxplots\_by\_file.png`
+
+# 
+
+# Old images from previous runs are not automatically removed.
+
+# 
+
+# \## Before scientific interpretation
+
+# 
+
+# The following points must be verified before drawing scientific conclusions:
+
+# 
+
+# \- Q00 calibration and file structure.
+
+# \- Operating regimes of the Bi/Cr/Fe channels.
+
+# \- Independence of samples and experimental series.
+
+# \- Irradiation statuses and irradiation dates.
+
+# \- Constancy of the time step within recordings.
+
+# 
+
+# The code has been checked syntactically. Processing of the binary files and model training were not run in this delivery.
+
