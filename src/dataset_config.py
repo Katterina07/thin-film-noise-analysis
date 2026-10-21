@@ -36,7 +36,7 @@ def register(series, material, year, fs, channels, role,
             "sampling_rate_hz": fs,
             "analysis_role": role,
             "used_for_training": role == "baseline",
-            "irradiated": None,
+            "irradiated": True,  # per lab records, not included in the repo
             "control_mode": (control_modes or {}).get(channel, "unknown"),
             "measurement_type": (measurement_types or {}).get(channel, "unknown"),
         }
