@@ -176,9 +176,11 @@ interpreted as a methodological demonstration rather than as physical conclusion
   may therefore be optimistic.
 - **Channel regimes.** The operating regimes of the Bi/Cr/Fe channels (C01 vs C02)
   are unknown.
-- **Irradiation dates.** Irradiation status is taken from the laboratory records
-  (not included in this repository); irradiation dates are not documented,
-  so no conclusions about dose or time-dependent effects are drawn.
+- **Irradiation status.** The irradiation status of the samples is known from
+  laboratory records (not included in this repository), but it has not yet been
+  entered into `dataset_config.py` (`irradiated=None`). The results below were
+  produced without it, so `irradiated_film_predictions.csv` is empty and no
+  conclusions about radiation effects are drawn.
 - **Sampling step.** Frequencies are computed from the file-level average time step;
   its constancy within a recording was not checked.
 - **Calibration.** Q00 calibration and file structure follow the original processing
